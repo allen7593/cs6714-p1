@@ -1,0 +1,14 @@
+   [[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+torch = {file = "http://download.pytorch.org/whl/cu90/torch-0.4.1-cp36-cp36m-win_amd64.whl"}
+torchvision = {git = "https://github.com/pytorch/vision"}
+matplotlib = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.6"
