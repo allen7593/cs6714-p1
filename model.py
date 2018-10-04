@@ -55,7 +55,8 @@ class sequence_labeling(nn.Module):
         sorted_input_embeds = input_embeds[perm_idx]
         _, desorted_indices = torch.sort(perm_idx, descending=False)
 
-        output_sequence = pack_padded_sequence(sorted_input_embeds, lengths=sorted_batch_sentence_len_list.data.tolist(), batch_first=True)
+        output_sequence = pack_padded_sequence(sorted_input_embeds,
+                                               lengths=sorted_batch_sentence_len_list.data.tolist(), batch_first=True)
         output_sequence, state = self.lstm(output_sequence)
         output_sequence, _ = pad_packed_sequence(output_sequence, batch_first=True)
         output_sequence = output_sequence[desorted_indices]
@@ -65,7 +66,8 @@ class sequence_labeling(nn.Module):
 
         return logits
 
-    def forward(self, batch_word_index_lists, batch_sentence_len_list, batch_word_mask, batch_char_index_matrices, batch_word_len_lists, batch_char_mask, batch_tag_index_list):
+    def forward(self, batch_word_index_lists, batch_sentence_len_list, batch_word_mask, batch_char_index_matrices,
+                batch_word_len_lists, batch_char_mask, batch_tag_index_list):
         logits = self._rnn(batch_word_index_lists, batch_sentence_len_list, batch_char_index_matrices,
                            batch_word_len_lists)
         batch_tag_index_list = batch_tag_index_list.view(-1)
@@ -74,7 +76,8 @@ class sequence_labeling(nn.Module):
         train_loss = self.loss_func(logits, batch_tag_index_list) * batch_word_mask
         return train_loss.mean()
 
-    def decode(self, batch_word_index_lists, batch_sentence_len_list, batch_char_index_matrices, batch_word_len_lists, batch_char_mask):
+    def decode(self, batch_word_index_lists, batch_sentence_len_list, batch_char_index_matrices, batch_word_len_lists,
+               batch_char_mask):
         logits = self._rnn(batch_word_index_lists, batch_sentence_len_list, batch_char_index_matrices,
                            batch_word_len_lists)
         _, pred = torch.max(logits, dim=2)
