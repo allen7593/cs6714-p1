@@ -24,8 +24,8 @@ def get_precision_recall(golden_list, predict_list) -> tuple:
     gt = get_dict_len(golden_tags)
     predict_tags = get_tags(predict_list)
     predict_len = get_dict_len(predict_tags)
-    fp = get_fp(golden_tags, golden_list, predict_list)
-    return fp / gt, fp / predict_len
+    tp = get_tp(golden_tags, golden_list, predict_list)
+    return tp / gt, tp / predict_len
 
 
 def get_dict_len(tags: dict):
@@ -97,7 +97,7 @@ def finalised_list(num_of_word, len_of_sent, num_of_sent, tags_result, current_t
         match = False
 
 
-def get_fp(golden_tags, golden_list, predict_list):
+def get_tp(golden_tags, golden_list, predict_list):
     match = 0
     for key in golden_tags:
         sent_num = key
