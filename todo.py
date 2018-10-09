@@ -46,6 +46,8 @@ def get_tags(tag_list: list):
     tags_result = {}
     for num_of_sent, sent in enumerate(tag_list):
         for num_of_word, word in enumerate(sent):
+            if (not tar_find and word == "I-TAR") or (not hyp_find and word == 'I-HYP'):
+                continue
             if tar_find:
                 if word != "I-TAR":
                     if num_of_sent not in tags_result:
