@@ -5,8 +5,11 @@ _config = config()
 
 
 def evaluate(golden_list, predict_list):
-    precision, recall = get_precision_recall(golden_list, predict_list)
-    return f1_score(precision, recall)
+    try:
+        precision, recall = get_precision_recall(golden_list, predict_list)
+        return f1_score(precision, recall)
+    except ZeroDivisionError:
+        return 0
 
 
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
