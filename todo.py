@@ -1,4 +1,5 @@
 import torch
+import torch.nn.utils.rnn as rnn
 from config import config
 
 _config = config()
@@ -18,8 +19,29 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
 
 def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
-    # TODO:get_char_sequence
-    pass;
+    a = list()
+    for batch_char_index_list, batch_char_len_lists in zip(batch_char_index_matrices, batch_word_len_lists):
+        out_seq = get_char_word_seq(model, batch_char_index_list, batch_char_len_lists)
+        out_seq = out_seq.narrow(1, out_seq.size()[1] - 1, 1)
+        out_seq = torch.squeeze(out_seq, 1)
+        a.append(out_seq)
+    a = torch.stack(a)
+    return a
+
+
+def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
+    input_char_embeds = model.char_embeds(batch_char_index_lists)
+    input_embeds = model.non_recurrent_dropout(input_char_embeds)
+    perm_idx, sorted_batch_word_len_list = model.sort_input(batch_char_len_lists)
+    sorted_input_embeds = input_embeds[perm_idx]
+    _, desorted_indices = torch.sort(perm_idx, descending=False)
+    output_sequence = rnn.pack_padded_sequence(sorted_input_embeds,
+                                               lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
+    output_sequence, state = model.char_lstm(output_sequence)
+    output_sequence, _ = rnn.pad_packed_sequence(output_sequence, batch_first=True)
+    output_sequence = output_sequence[desorted_indices]
+    output_sequence = model.non_recurrent_dropout(output_sequence)
+    return output_sequence
 
 
 def get_precision_recall(golden_list, predict_list) -> tuple:
