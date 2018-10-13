@@ -22,11 +22,15 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
     a = list()
     for batch_char_index_list, batch_char_len_lists in zip(batch_char_index_matrices, batch_word_len_lists):
         out_seq = get_char_word_seq(model, batch_char_index_list, batch_char_len_lists)
-        out_seq = out_seq.narrow(1, out_seq.size()[1] - 1, 1)
-        out_seq = torch.squeeze(out_seq, 1)
+        out_seq = narrow_the_matrix(out_seq)
         a.append(out_seq)
     a = torch.stack(a)
     return a
+
+
+def narrow_the_matrix(output_seq):
+    result = [torch.cat([word[0][50:], word[len(word) - 1][0:50]]) for word in output_seq]
+    return torch.stack(result)
 
 
 def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
