@@ -31,16 +31,14 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
 
 def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
     input_char_embeds = model.char_embeds(batch_char_index_lists)
-    input_embeds = model.non_recurrent_dropout(input_char_embeds)
     perm_idx, sorted_batch_word_len_list = model.sort_input(batch_char_len_lists)
-    sorted_input_embeds = input_embeds[perm_idx]
+    sorted_input_embeds = input_char_embeds[perm_idx]
     _, desorted_indices = torch.sort(perm_idx, descending=False)
     output_sequence = rnn.pack_padded_sequence(sorted_input_embeds,
                                                lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
     output_sequence, state = model.char_lstm(output_sequence)
     output_sequence, _ = rnn.pad_packed_sequence(output_sequence, batch_first=True)
     output_sequence = output_sequence[desorted_indices]
-    output_sequence = model.non_recurrent_dropout(output_sequence)
     return output_sequence
 
 

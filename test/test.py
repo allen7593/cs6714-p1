@@ -60,4 +60,4 @@ class EvaluationTest(unittest.TestCase):
         predict_list = [['B-TAR', 'B-TAR', 'I-TAR', 'O'], ['I-TAR', 'O', 'O', 'O']]
 
         f1 = evaluate(golden_list, predict_list)
-        self.assertEqual(f1, f1_score(2 / 5, 2 / 2))
+        self.assertEqual(f1, 0)
