@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn
 from config import config
 
@@ -13,7 +14,7 @@ def evaluate(golden_list, predict_list):
         return 0
 
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
-	
+
     if input.is_cuda:
         igates = F.linear(input, w_ih)
         hgates = F.linear(hidden[0], w_hh)
