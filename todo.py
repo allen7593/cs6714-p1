@@ -5,13 +5,21 @@ from config import config
 
 _config = config()
 
+# At least up to 3 decimal places, as is the common research practice.
+
 
 def evaluate(golden_list, predict_list):
+    golden_tags = get_tags(golden_list)
+    gt = get_dict_len(golden_tags)
+    predict_tags = get_tags(predict_list)
+    predict_len = get_dict_len(predict_tags)
+    if (gt == 0) and (predict_len == 0):
+        return 1.000
     try:
-        precision, recall = get_precision_recall(golden_list, predict_list)
+        precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
         return f1_score(precision, recall)
     except ZeroDivisionError:
-        return 0
+        return 0.000
 
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
@@ -69,12 +77,7 @@ def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
     return output_sequence
 
 
-def get_precision_recall(golden_list, predict_list) -> tuple:
-    
-    golden_tags = get_tags(golden_list)
-    gt = get_dict_len(golden_tags)
-    predict_tags = get_tags(predict_list)
-    predict_len = get_dict_len(predict_tags)
+def get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len) -> tuple:
     tp = get_tp(golden_tags, golden_list, predict_list)
     return tp / gt, tp / predict_len
 
