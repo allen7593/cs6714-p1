@@ -28,7 +28,7 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
     #ingate = F.sigmoid(ingate) # 1-forgetGate
     forgetgate = F.sigmoid(forgetgate)
-    ingate_coupled = torch.add(1, torch.neg(forgetgate))
+    ingate_coupled = torch.add(torch.neg(forgetgate),1)
     cellgate = F.tanh(cellgate)
     outgate = F.sigmoid(outgate)
 
@@ -70,6 +70,7 @@ def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
 
 
 def get_precision_recall(golden_list, predict_list) -> tuple:
+    
     golden_tags = get_tags(golden_list)
     gt = get_dict_len(golden_tags)
     predict_tags = get_tags(predict_list)
@@ -78,6 +79,8 @@ def get_precision_recall(golden_list, predict_list) -> tuple:
     return tp / gt, tp / predict_len
 
 
+# The number of tags(results) in the tags_dictionary
+# tags: {SentNum: [[wordNum, wordNum], [..]]}
 def get_dict_len(tags: dict):
     length = 0
     for key in tags:
@@ -92,53 +95,61 @@ def f1_score(precision, recall) -> float:
 def get_tags(tag_list: list):
     tar_find = False
     hyp_find = False
-    current_tag = []
-    tags_result = {}
+    current_tag = [] # [wordNum, wordNum]
+    tags_result = {} # {SentNum: [[wordNum, wordNum], ]}
     for num_of_sent, sent in enumerate(tag_list):
         for num_of_word, word in enumerate(sent):
-            if (not tar_find and word == "I-TAR") or (not hyp_find and word == 'I-HYP'):
-                continue
+            # Check if there are any tags are done
+            # If tar_find
             if tar_find:
-                if word != "I-TAR":
+                if word != "I-TAR": # == "O" or "I-HYP" or "B-HYP" or "B-TAR"
                     if num_of_sent not in tags_result:
                         tags_result[num_of_sent] = [current_tag]
                     else:
                         tags_result[num_of_sent].append(current_tag)
+                    # reset the current tag and tar_find
                     current_tag = list()
                     tar_find = False
                 else:
                     current_tag.append(num_of_word)
-                    finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, tar_find)
+            # If hy_find
             elif hyp_find:
-                if word != "I-HYP":
+                if word != "I-HYP": # == "O" or "I-TAR" or "B-TAR" or "B-HYP"
                     if num_of_sent not in tags_result:
                         tags_result[num_of_sent] = [current_tag]
                     else:
                         tags_result[num_of_sent].append(current_tag)
+                    # reset the current tag and hyp_find
                     current_tag = list()
                     hyp_find = False
                 else:
                     current_tag.append(num_of_word)
-                    finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, hyp_find)
-            elif word != "O":
-                current_tag = list()
-                current_tag.append(num_of_word)
+
+            # Deal with the current word
+            # Valid I-TAR and I-HYP are dealt with in the tag found case above
+            # Invalid I-* and O should be ignored(the invalid I-* shouldn't appear)
+            # B-TAR and B-HYP should be dealt with in both cases      
             if word == "B-TAR":
                 tar_find = True
                 current_tag = list()
                 current_tag.append(num_of_word)
-                finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, tar_find)
-            elif word == "B-HYP":
+            if word == "B-HYP":
                 hyp_find = True
                 current_tag = list()
                 current_tag.append(num_of_word)
-                finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, hyp_find)
+        # the last check on tar_find and hyp_find
+        if tar_find or hyp_find:
+            if num_of_sent not in tags_result:
+                tags_result[num_of_sent] = [current_tag]
+            else:
+                tags_result[num_of_sent].append(current_tag)
         tar_find = False
         hyp_find = False
         current_tag = list()
+
     return tags_result
 
-
+'''
 def finalised_list(num_of_word, len_of_sent, num_of_sent, tags_result, current_tag, match):
     if num_of_word == len_of_sent - 1:
         if num_of_sent not in tags_result:
@@ -147,21 +158,25 @@ def finalised_list(num_of_word, len_of_sent, num_of_sent, tags_result, current_t
             tags_result[num_of_sent].append(current_tag)
         current_tag = list()
         match = False
+'''
 
 
+# get the true positive value derived from golden_list and predict_list
+# golden_tags: {SentNum: [[wordNum, wordNum], [..]]}
 def get_tp(golden_tags, golden_list, predict_list):
     match = 0
     for key in golden_tags:
-        sent_num = key
-        golden_tag = golden_tags[sent_num]
-        for tags in golden_tag:
+        sent_num = key # index of the sentence
+        golden_tag = golden_tags[sent_num] # tags_list in this sentence
+        for tags in golden_tag: # each tag in this sentence, like [wordNum, wordNum]
             if match_list(sent_num, tags, golden_list, predict_list):
                 match += 1
     return match
 
 
-def match_list(send_num: int, taget: list, golden_list, predict_list) -> bool:
+def match_list(sent_num: int, taget: list, golden_list, predict_list) -> bool:
     for index in taget:
-        if golden_list[send_num][index] != predict_list[send_num][index]:
+        if golden_list[sent_num][index] != predict_list[sent_num][index]:
+            # return match_list()
             return False
     return True
