@@ -44,19 +44,6 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
     return output_sequence
 
 
-def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
-    input_char_embeds = model.char_embeds(batch_char_index_lists)
-    perm_idx, sorted_batch_word_len_list = model.sort_input(batch_char_len_lists)
-    sorted_input_embeds = input_char_embeds[perm_idx]
-    _, desorted_indices = torch.sort(perm_idx, descending=False)
-    output_sequence = rnn.pack_padded_sequence(sorted_input_embeds,
-                                               lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
-    output_sequence, state = model.char_lstm(output_sequence)
-    output_sequence, _ = rnn.pad_packed_sequence(output_sequence, batch_first=True)
-    output_sequence = output_sequence[desorted_indices]
-    return output_sequence
-
-
 def get_precision_recall(golden_list, predict_list) -> tuple:
     golden_tags = get_tags(golden_list)
     gt = get_dict_len(golden_tags)
