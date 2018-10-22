@@ -1,5 +1,7 @@
 import torch
 import torch.nn.utils.rnn as rnn
+import torch.nn.functional as F
+from torch.nn._functions.thnn import rnnFusedPointwise as fusedBackend
 from config import config
 
 _config = config()
@@ -19,18 +21,27 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
 
 def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
-    a = list()
-    for batch_char_index_list, batch_char_len_lists in zip(batch_char_index_matrices, batch_word_len_lists):
-        out_seq = get_char_word_seq(model, batch_char_index_list, batch_char_len_lists)
-        out_seq = narrow_the_matrix(out_seq)
-        a.append(out_seq)
-    a = torch.stack(a)
-    return a
+    batch_size = batch_char_index_matrices.size()
+    mini_batch = batch_char_index_matrices.view(batch_size[0] * batch_size[1], batch_size[2])
+    mini_batch_len_list = batch_word_len_lists.view(batch_size[0] * batch_size[1])
 
+    input_char_embeds = model.char_embeds(mini_batch)
+    perm_idx, sorted_batch_word_len_list = model.sort_input(mini_batch_len_list)
+    _, desorted_indices = torch.sort(perm_idx, descending=False)
+    sorted_input_embeds = input_char_embeds[perm_idx]
 
-def narrow_the_matrix(output_seq):
-    result = [torch.cat([word[0][50:], word[len(word) - 1][0:50]]) for word in output_seq]
-    return torch.stack(result)
+    output_sequence = rnn.pack_padded_sequence(sorted_input_embeds, lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
+    output_sequence, state = model.char_lstm(output_sequence)
+
+    output_sequence = torch.transpose(state[0], 0, 1).contiguous()
+
+    tmp_size = output_sequence.size()
+    output_sequence = output_sequence.view(batch_size[0] * batch_size[1], tmp_size[1] * tmp_size[2])
+    output_sequence = output_sequence[desorted_indices]
+    output_sequence_size = output_sequence.size()
+    output_sequence = output_sequence.view(batch_size[0], batch_size[1], output_sequence_size[1])
+
+    return output_sequence
 
 
 def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
