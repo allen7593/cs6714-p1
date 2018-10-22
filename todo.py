@@ -13,13 +13,17 @@ def evaluate(golden_list, predict_list):
     gt = get_dict_len(golden_tags)
     predict_tags = get_tags(predict_list)
     predict_len = get_dict_len(predict_tags)
+    f1 = 0
     if (gt == 0) and (predict_len == 0):
-        return 1.000
-    try:
-        precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
-        return f1_score(precision, recall)
-    except ZeroDivisionError:
-        return 0.000
+        f1 = 1
+    else:
+        try:
+            precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
+            f1 = f1_score(precision, recall)
+        except ZeroDivisionError:
+            f1 = 0
+    f1 = round(f1, 3)
+    return f1
 
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
@@ -55,17 +59,24 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
         out_seq = get_char_word_seq(model, batch_char_index_list, batch_char_len_lists)
         out_seq = narrow_the_matrix(out_seq)
         a.append(out_seq)
-    a = torch.stack(a)
-    return a
+    return torch.stack(a)
 
 
 def narrow_the_matrix(output_seq):
-    result = [torch.cat([word[0][50:], word[len(word) - 1][0:50]]) for word in output_seq]
+    # concat lastouput[fisrhalf] and firstoutput[latter half]
+    # result = list()
+    # for word in output_seq:
+    #     result.append(word[len(word) - 1][0:config.char_lstm_output_dim]+word[0][config.char_lstm_output_dim:])
+    # return result
+    
+    result = [torch.cat([word[0][config.char_lstm_output_dim:], word[len(word) - 1][0:config.char_lstm_output_dim]]) for word in output_seq]
     return torch.stack(result)
 
-
+# For each sentence
 def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
     input_char_embeds = model.char_embeds(batch_char_index_lists)
+    # input_char_embeds = self.non_recurrent_dropout(input_char_embeds)
+    # [max_word_length, sencond_max, ..]
     perm_idx, sorted_batch_word_len_list = model.sort_input(batch_char_len_lists)
     sorted_input_embeds = input_char_embeds[perm_idx]
     _, desorted_indices = torch.sort(perm_idx, descending=False)
@@ -74,6 +85,7 @@ def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
     output_sequence, state = model.char_lstm(output_sequence)
     output_sequence, _ = rnn.pad_packed_sequence(output_sequence, batch_first=True)
     output_sequence = output_sequence[desorted_indices]
+    # output_sequence = self.non_recurrent_dropout(output_sequence)
     return output_sequence
 
 
