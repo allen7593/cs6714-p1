@@ -1,7 +1,7 @@
 # You can change the paths/hyper-parameters in this file to experiment your implementation
 class config:
     use_f1 = False
-    use_char_embedding = True
+    use_char_embedding = False
     use_modified_LSTMCell = True
 
     train_file = 'data/train.txt'
