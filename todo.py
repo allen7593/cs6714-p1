@@ -6,8 +6,6 @@ from config import config
 _config = config()
 
 # At least up to 3 decimal places, as is the common research practice.
-
-
 def evaluate(golden_list, predict_list):
     golden_tags = get_tags(golden_list)
     gt = get_dict_len(golden_tags)
@@ -52,41 +50,26 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
     pass;
 
-
 def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
-    a = list()
-    for batch_char_index_list, batch_char_len_lists in zip(batch_char_index_matrices, batch_word_len_lists):
-        out_seq = get_char_word_seq(model, batch_char_index_list, batch_char_len_lists)
-        out_seq = narrow_the_matrix(out_seq)
-        a.append(out_seq)
-    return torch.stack(a)
-
-
-def narrow_the_matrix(output_seq):
-    # concat lastouput[fisrhalf] and firstoutput[latter half]
-    # result = list()
-    # for word in output_seq:
-    #     result.append(word[len(word) - 1][0:config.char_lstm_output_dim]+word[0][config.char_lstm_output_dim:])
-    # return result
+        
+    batch_size = batch_char_index_matrices.size() # [num_of_len, num_of_word, num_of_char]
+    minibatch = batch_char_index_matrices.view(batch_size[0] * batch_size[1], batch_size[2]) # [total_num_of_word, num_of_char]
+    minibatch_word_length_list = batch_word_len_lists.view(batch_size[0] * batch_size[1]) # [word_length]
     
-    result = [torch.cat([word[0][config.char_lstm_output_dim:], word[len(word) - 1][0:config.char_lstm_output_dim]]) for word in output_seq]
-    return torch.stack(result)
-
-# For each sentence
-def get_char_word_seq(model, batch_char_index_lists, batch_char_len_lists):
-    input_char_embeds = model.char_embeds(batch_char_index_lists)
-    # input_char_embeds = self.non_recurrent_dropout(input_char_embeds)
-    # [max_word_length, sencond_max, ..]
-    perm_idx, sorted_batch_word_len_list = model.sort_input(batch_char_len_lists)
+    input_char_embeds = model.char_embeds(minibatch)    
+    perm_idx, sorted_minibatch_word_len_list = model.sort_input(minibatch_word_length_list)
     sorted_input_embeds = input_char_embeds[perm_idx]
     _, desorted_indices = torch.sort(perm_idx, descending=False)
     output_sequence = rnn.pack_padded_sequence(sorted_input_embeds,
-                                               lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
-    output_sequence, state = model.char_lstm(output_sequence)
-    output_sequence, _ = rnn.pad_packed_sequence(output_sequence, batch_first=True)
-    output_sequence = output_sequence[desorted_indices]
-    # output_sequence = self.non_recurrent_dropout(output_sequence)
-    return output_sequence
+                                               lengths=sorted_minibatch_word_len_list.data.tolist(), batch_first=True)
+
+    output_sequence, (hidden_state, cell_state) = model.char_lstm(output_sequence)
+    
+    # hidden_state: [num_of_layer*dir, batch_size, hidden_dim]
+    hidden_state = torch.cat((hidden_state[0,:,:],hidden_state[1,:,:]), -1)
+    hidden_state = hidden_state[desorted_indices]
+    result = hidden_state.view(batch_size[0], batch_size[1], -1)
+    return result
 
 
 def get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len) -> tuple:
@@ -188,10 +171,9 @@ def get_tp(golden_tags, golden_list, predict_list):
                 match += 1
     return match
 
-
+# Check if elements match given sentNum and wordNum
 def match_list(sent_num: int, taget: list, golden_list, predict_list) -> bool:
     for index in taget:
         if golden_list[sent_num][index] != predict_list[sent_num][index]:
-            # return match_list()
             return False
     return True
