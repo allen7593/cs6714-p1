@@ -15,8 +15,6 @@ def evaluate(golden_list, predict_list):
     predict_len = get_dict_len(predict_tags)
     if gt == predict_len == 0:
         return 1
-    elif gt > 0 and predict_len == 0:
-        return 0
     try:
         precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
         return f1_score(precision, recall)
