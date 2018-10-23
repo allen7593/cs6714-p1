@@ -2,10 +2,9 @@ import torch
 import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn
 from config import config
-
 _config = config()
 
-# At least up to 3 decimal places, as is the common research practice.
+# At least up to 3 decimal places
 def evaluate(golden_list, predict_list):
     golden_tags = get_tags(golden_list)
     gt = get_dict_len(golden_tags)
@@ -13,15 +12,23 @@ def evaluate(golden_list, predict_list):
     predict_len = get_dict_len(predict_tags)
     f1 = 0
     if (gt == 0) and (predict_len == 0):
-        f1 = 1
+        f1 = 1.000
     else:
         try:
             precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
             f1 = f1_score(precision, recall)
         except ZeroDivisionError:
-            f1 = 0
-    f1 = round(f1, 3)
+            f1 = 0.000
     return f1
+
+'''
+def evaluate(golden_list, predict_list):
+    try:
+        precision, recall = get_precision_recall(golden_list, predict_list)
+        return f1_score(precision, recall)
+    except ZeroDivisionError:
+        return 0
+'''
 
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
@@ -35,13 +42,11 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
     gates = F.linear(input, w_ih, b_ih) + F.linear(hx, w_hh, b_hh)
     ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
-    #ingate = F.sigmoid(ingate) # 1-forgetGate
     forgetgate = torch.sigmoid(forgetgate)
-    ingate_coupled = torch.add(torch.neg(forgetgate),1)
+    ingate_coupled = 1-forgetGate
     cellgate = torch.tanh(cellgate)
     outgate = torch.sigmoid(outgate)
 
-    #cy = (forgetgate * cx) + (ingate * cellgate)
     cy = (forgetgate * cx) + (ingate_coupled * cellgate)
     hy = outgate * torch.tanh(cy)
 
@@ -49,6 +54,34 @@ def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
 
     pass;
 
+def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
+    batch_size = batch_char_index_matrices.size()
+    mini_batch = batch_char_index_matrices.view(batch_size[0] * batch_size[1], batch_size[2])
+    mini_batch_len_list = batch_word_len_lists.view(batch_size[0] * batch_size[1])
+
+    input_char_embeds = model.char_embeds(mini_batch)
+    perm_idx, sorted_batch_word_len_list = model.sort_input(mini_batch_len_list)
+    _, desorted_indices = torch.sort(perm_idx, descending=False)
+    sorted_input_embeds = input_char_embeds[perm_idx]
+
+    output_sequence = rnn.pack_padded_sequence(sorted_input_embeds, lengths=sorted_batch_word_len_list.data.tolist(), batch_first=True)
+    output_sequence, state = model.char_lstm(output_sequence)
+
+    output_sequence = torch.transpose(state[0], 0, 1).contiguous()
+    # output_sequence = torch.transpose(output_sequence, 0, 1).contiguous()
+    # output_sequence = torch.transpose(output_sequence, 1, 2).contiguous()
+
+    tmp_size = output_sequence.size()
+    output_sequence = output_sequence.view(batch_size[0] * batch_size[1], tmp_size[1] * tmp_size[2])
+    output_sequence = output_sequence[desorted_indices]
+    output_sequence_size = output_sequence.size()
+    output_sequence = output_sequence.view(batch_size[0], batch_size[1], output_sequence_size[1])
+
+    return output_sequence
+
+
+'''
+# Wendy's
 def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
         
     batch_size = batch_char_index_matrices.size() # [num_of_len, num_of_word, num_of_char]
@@ -69,11 +102,22 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
     hidden_state = hidden_state[desorted_indices]
     result = hidden_state.view(batch_size[0], batch_size[1], -1)
     return result
+'''
 
 
 def get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len) -> tuple:
     tp = get_tp(golden_tags, golden_list, predict_list)
     return tp / gt, tp / predict_len
+
+'''
+def get_precision_recall(golden_list, predict_list) -> tuple:
+    golden_tags = get_tags(golden_list)
+    gt = get_dict_len(golden_tags)
+    predict_tags = get_tags(predict_list)
+    predict_len = get_dict_len(predict_tags)
+    tp = get_tp(golden_tags, golden_list, predict_list)
+    return tp / gt, tp / predict_len
+'''
 
 
 # The number of tags(results) in the tags_dictionary
@@ -145,6 +189,59 @@ def get_tags(tag_list: list):
         current_tag = list()
 
     return tags_result
+
+'''
+def get_tags(tag_list: list):
+    tar_find = False
+    hyp_find = False
+    current_tag = []
+    tags_result = {}
+    for num_of_sent, sent in enumerate(tag_list):
+        for num_of_word, word in enumerate(sent):
+            if (not tar_find and word == "I-TAR") or (not hyp_find and word == 'I-HYP'):
+                continue
+            if tar_find:
+                if word != "I-TAR":
+                    if num_of_sent not in tags_result:
+                        tags_result[num_of_sent] = [current_tag]
+                    else:
+                        tags_result[num_of_sent].append(current_tag)
+                    current_tag = list()
+                    tar_find = False
+                else:
+                    current_tag.append(num_of_word)
+                    finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, tar_find)
+            elif hyp_find:
+                if word != "I-HYP":
+                    if num_of_sent not in tags_result:
+                        tags_result[num_of_sent] = [current_tag]
+                    else:
+                        tags_result[num_of_sent].append(current_tag)
+                    current_tag = list()
+                    hyp_find = False
+                else:
+                    current_tag.append(num_of_word)
+                    finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, hyp_find)
+            elif word != "O":
+                current_tag = list()
+                current_tag.append(num_of_word)
+            if word == "B-TAR":
+                tar_find = True
+                current_tag = list()
+                current_tag.append(num_of_word)
+                finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, tar_find)
+            elif word == "B-HYP":
+                hyp_find = True
+                current_tag = list()
+                current_tag.append(num_of_word)
+                finalised_list(num_of_word, len(sent), num_of_sent, tags_result, current_tag, hyp_find)
+        tar_find = False
+        hyp_find = False
+        current_tag = list()
+    return tags_result
+'''
+
+
 
 '''
 def finalised_list(num_of_word, len_of_sent, num_of_sent, tags_result, current_tag, match):
