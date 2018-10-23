@@ -61,3 +61,31 @@ class EvaluationTest(unittest.TestCase):
 
         f1 = evaluate(golden_list, predict_list)
         self.assertEqual(f1, 0)
+
+    def testEvaluation_8(self):
+        golden_list = [['O', 'O', 'O', 'O'], ['O', 'O', 'O', 'O']]
+        predict_list = [['O', 'O', 'O', 'O'], ['O', 'O', 'O', 'O']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, 1.00)
+
+    def testEvaluation_9(self):
+        golden_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+        predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'O'], ['I-TAR', 'O', 'O', 'O']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, f1_score(1 / 4, 1 / 1))
+
+    def testEvaluation_10(self):
+        golden_list = [['O', 'O', 'O', 'O'], ['O', 'O', 'O', 'O']]
+        predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, 0)
+
+    def testEvaluation_11(self):
+        golden_list = [['B-TAR', 'I-TAR', 'B-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+        predict_list = [['B-TAR', 'I-TAR', 'B-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, 1)
