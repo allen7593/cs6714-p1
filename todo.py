@@ -187,13 +187,22 @@ def pre_match_tags(golden_tags, predict_tags):
     for pred_sent, pred_val in predict_tags.items():
         if pred_sent in golden_tags:
             gold_val = golden_tags[pred_sent]
-            for pred_tag in pred_val:
-                for gold_tag in gold_val:
-                    if pred_tag[0] == gold_tag[0] and len(pred_tag) > len(gold_tag):
+            gold_count = 0
+            pred_count = 0
+            while gold_count < len(gold_val) and pred_count < len(pred_val):
+                if gold_val[gold_count][0] == pred_val[pred_count][0]:
+                    if len(pred_val[pred_count]) > len(gold_val[gold_count]):
                         if pred_sent not in gold_tag_to_remove:
-                            gold_tag_to_remove[pred_sent] = gold_tag
+                            gold_tag_to_remove[pred_sent] = gold_val[gold_count]
                         else:
-                            gold_tag_to_remove[pred_sent].append(gold_tag)
+                            gold_tag_to_remove[pred_sent].append(gold_val[gold_count])
+                    pred_count += 1
+                    gold_count += 1
+                elif gold_val[gold_count][0] > pred_val[pred_count][0]:
+                    pred_count += 1
+                else:
+                    gold_count += 1
+
     for sent_num, tags in gold_tag_to_remove.items():
         if tags in golden_tags[sent_num]:
             golden_tags[sent_num].remove(tags)
