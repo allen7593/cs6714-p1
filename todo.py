@@ -191,7 +191,7 @@ def pre_match_tags(golden_tags, predict_tags):
             pred_count = 0
             while gold_count < len(gold_val) and pred_count < len(pred_val):
                 if gold_val[gold_count][0] == pred_val[pred_count][0]:
-                    if len(pred_val[pred_count]) > len(gold_val[gold_count]):
+                    if len(pred_val[pred_count]) != len(gold_val[gold_count]):
                         if pred_sent not in gold_tag_to_remove:
                             gold_tag_to_remove[pred_sent] = gold_val[gold_count]
                         else:
