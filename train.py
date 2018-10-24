@@ -7,6 +7,7 @@ from tqdm import tqdm
 from todo import evaluate
 import torch
 from randomness import apply_random_seed
+import time
 
 if __name__ == "__main__":
     _config = config()
@@ -25,11 +26,15 @@ if __name__ == "__main__":
     train = DataReader(_config, _config.train_file, word_dict, char_dict, tag_dict, _config.batch_size, is_train=True)
     dev = DataReader(_config, _config.dev_file, word_dict, char_dict, tag_dict, _config.batch_size)
 
+
     model = sequence_labeling(_config, word_embedding, char_embedding)
     optimizer = torch.optim.Adam(model.parameters())
 
     best_f1 = 0.0
+    total_time = 0.0
+    training_time = []
     for i in range(_config.nepoch):
+        start = time.time()
         model.train()
         print('EPOCH %d / %d' % (i + 1, _config.nepoch))
         # you can disable pbar if you do not want to show the training progress
@@ -57,6 +62,7 @@ if __name__ == "__main__":
 
             new_f1 = evaluate(golden_dev_ins, pred_dev_ins)
             if new_f1 > best_f1:
+                print (new_f1)
                 model_state = model.state_dict()
                 torch.save(model_state, _config.model_file)
                 best_f1 = new_f1
@@ -64,3 +70,19 @@ if __name__ == "__main__":
         else:
             model_state = model.state_dict()
             torch.save(model_state, _config.model_file)
+        
+        end = time.time()
+        training_time.append(end-start)
+
+    for t in training_time:
+        total_time += t
+    print ('Total training time: %8f' % total_time)
+    print ('Average_time: %8f' % (total_time/_config.nepoch))
+
+
+
+    
+
+
+
+

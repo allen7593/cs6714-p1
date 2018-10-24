@@ -40,20 +40,20 @@ class EvaluationTest(unittest.TestCase):
              'O', 'O', 'O', 'O', 'O', 'O', 'O']]
         predict_list = [
             ['B-TAR', 'O', 'O', 'O', 'B-HYP', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
-             'O'], [
-                'O', 'I-TAR', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-TAR', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
+             'O'], 
+            ['O', 'I-TAR', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-TAR', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
                 'O',
                 'O', 'O', 'O', 'I-HYP', 'O']]
 
         f1 = evaluate(golden_list, predict_list)
-        self.assertEqual(f1, f1_score(2 / 4, 2 / 3))
+        self.assertEqual(f1, f1_score(2 / 3, 2 / 4))
 
     def testEvaluation_6(self):
         golden_list = [['B-TAR', 'I-TAR', 'B-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
         predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'O'], ['I-TAR', 'O', 'O', 'O']]
 
         f1 = evaluate(golden_list, predict_list)
-        self.assertEqual(f1, f1_score(1 / 5, 1 / 1))
+        self.assertEqual(f1, f1_score(0/ 5, 0 / 1))
 
     def testEvaluation_7(self):
         golden_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
@@ -154,12 +154,27 @@ class EvaluationTest(unittest.TestCase):
         f1 = evaluate(golden_list, predict_list)
         self.assertEqual(f1, f1_score(4/4,4/4))
 
-    def testEvaluation_15(self):
+    def testEvaluation_16(self):
         golden_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
         predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'I-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
 
         f1 = evaluate(golden_list, predict_list)
         self.assertEqual(f1, f1_score(3/3,3/4))
+
+    def testEvaluation_17(self):
+        golden_list = [['B-TAR']]
+        predict_list = [['O']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, 0)
+
+    def testEvaluation_17(self):
+        golden_list = [['O']]
+        predict_list = [['B-TAR']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, 0)
+
 
 
 
