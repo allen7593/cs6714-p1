@@ -22,16 +22,6 @@ def evaluate(golden_list, predict_list):
         return 0
 
 
-'''
-def evaluate(golden_list, predict_list):
-    try:
-        precision, recall = get_precision_recall(golden_list, predict_list)
-        return f1_score(precision, recall)
-    except ZeroDivisionError:
-        return 0
-'''
-
-
 def new_LSTMCell(input, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
     if input.is_cuda:
         igates = F.linear(input, w_ih)
@@ -84,17 +74,6 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
 def get_precision_recall(golden_tags, golden_list, predict_tags, predict_list, gt, predict_len) -> tuple:
     tp = get_tp(golden_tags, golden_list, predict_tags, predict_list)
     return tp / gt, tp / predict_len
-
-
-'''
-def get_precision_recall(golden_list, predict_list) -> tuple:
-    golden_tags = get_tags(golden_list)
-    gt = get_dict_len(golden_tags)
-    predict_tags = get_tags(predict_list)
-    predict_len = get_dict_len(predict_tags)
-    tp = get_tp(golden_tags, golden_list, predict_list)
-    return tp / gt, tp / predict_len
-'''
 
 
 # The number of tags(results) in the tags_dictionary
