@@ -53,7 +53,7 @@ class EvaluationTest(unittest.TestCase):
         predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'O'], ['I-TAR', 'O', 'O', 'O']]
 
         f1 = evaluate(golden_list, predict_list)
-        self.assertEqual(f1, f1_score(1 / 5, 1 / 1))
+        self.assertEqual(f1, 0)
 
     def testEvaluation_7(self):
         golden_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
@@ -89,3 +89,10 @@ class EvaluationTest(unittest.TestCase):
 
         f1 = evaluate(golden_list, predict_list)
         self.assertEqual(f1, 1)
+
+    def testEvaluation_12(self):
+        golden_list = [['B-TAR', 'I-TAR', 'I-TAR', 'B-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+        predict_list = [['B-TAR', 'I-TAR', 'I-TAR', 'I-HYP'], ['B-TAR', 'O', 'O', 'B-HYP']]
+
+        f1 = evaluate(golden_list, predict_list)
+        self.assertEqual(f1, f1_score(3 / 4, 3 / 3))

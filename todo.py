@@ -16,7 +16,7 @@ def evaluate(golden_list, predict_list):
     if gt == predict_len == 0:
         return 1
     try:
-        precision, recall = get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len)
+        precision, recall = get_precision_recall(golden_tags, golden_list, predict_tags, predict_list, gt, predict_len)
         return f1_score(precision, recall)
     except ZeroDivisionError:
         return 0
@@ -81,9 +81,10 @@ def get_char_sequence(model, batch_char_index_matrices, batch_word_len_lists):
     return output_sequence
 
 
-def get_precision_recall(golden_tags, golden_list, predict_list, gt, predict_len) -> tuple:
-    tp = get_tp(golden_tags, golden_list, predict_list)
+def get_precision_recall(golden_tags, golden_list, predict_tags, predict_list, gt, predict_len) -> tuple:
+    tp = get_tp(golden_tags, golden_list, predict_tags, predict_list)
     return tp / gt, tp / predict_len
+
 
 '''
 def get_precision_recall(golden_list, predict_list) -> tuple:
@@ -169,8 +170,9 @@ def get_tags(tag_list: list):
 
 # get the true positive value derived from golden_list and predict_list
 # golden_tags: {SentNum: [[wordNum, wordNum], [..]]}
-def get_tp(golden_tags, golden_list, predict_list):
+def get_tp(golden_tags, golden_list, predict_tags, predict_list):
     match = 0
+    pre_match_tags(golden_tags, predict_tags)
     for key in golden_tags:
         sent_num = key  # index of the sentence
         golden_tag = golden_tags[sent_num]  # tags_list in this sentence
@@ -178,6 +180,23 @@ def get_tp(golden_tags, golden_list, predict_list):
             if match_list(sent_num, tags, golden_list, predict_list):
                 match += 1
     return match
+
+
+def pre_match_tags(golden_tags, predict_tags):
+    gold_tag_to_remove = {}
+    for pred_sent, pred_val in predict_tags.items():
+        if pred_sent in golden_tags:
+            gold_val = golden_tags[pred_sent]
+            for pred_tag in pred_val:
+                for gold_tag in gold_val:
+                    if pred_tag[0] == gold_tag[0] and len(pred_tag) > len(gold_tag):
+                        if pred_sent not in gold_tag_to_remove:
+                            gold_tag_to_remove[pred_sent] = gold_tag
+                        else:
+                            gold_tag_to_remove[pred_sent].append(gold_tag)
+    for sent_num, tags in gold_tag_to_remove.items():
+        if tags in golden_tags[sent_num]:
+            golden_tags[sent_num].remove(tags)
 
 
 # Check if elements match given sentNum and wordNum
